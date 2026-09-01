@@ -1,0 +1,122 @@
+# ==========================================================
+# Roamora - Git Ignore
+# ==========================================================
+
+# ----------------------------------------------------------
+# Environment / secrets
+# ----------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+/backend/.env
+/backend/.env.*
+!/backend/.env.example
+
+/frontend/.env
+/frontend/.env.*
+!/frontend/.env.example
+
+*.pem
+*.key
+*.p12
+*.pfx
+
+# ----------------------------------------------------------
+# Node / Next.js
+# ----------------------------------------------------------
+node_modules/
+.next/
+out/
+dist/
+build/
+next-env.d.ts
+*.tsbuildinfo
+
+# ----------------------------------------------------------
+# Frontend testing output
+# ----------------------------------------------------------
+playwright-report/
+test-results/
+coverage/
+blob-report/
+
+# ----------------------------------------------------------
+# Python caches and test output
+# ----------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+pytest-cache-files-*/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ----------------------------------------------------------
+# Python virtual environments
+# ----------------------------------------------------------
+.venv/
+.venv-linux/
+venv/
+
+# ----------------------------------------------------------
+# Local application artifacts
+# ----------------------------------------------------------
+artifacts/
+*.log
+logs/
+tmp/
+temp/
+
+# ----------------------------------------------------------
+# Model / Hugging Face caches and generated training output
+# ----------------------------------------------------------
+.cache/
+huggingface-cache/
+model-cache/
+
+/backend/fine_tuning/data/raw/
+/backend/fine_tuning/data/processed/*.jsonl
+/backend/fine_tuning/checkpoints/
+/backend/fine_tuning/merged_model/
+/backend/fine_tuning/scripts/merged_model/
+/backend/fine_tuning/outputs/*
+!/backend/fine_tuning/outputs/.gitkeep
+checkpoint-*/
+runs/
+
+# Model file extensions are intentionally not ignored globally. Decide whether
+# each durable adapter/model artifact belongs in Git LFS, Hugging Face, a release,
+# or private storage before adding it to version control.
+
+# ----------------------------------------------------------
+# Local archives
+# ----------------------------------------------------------
+*.zip
+*.tar
+*.tar.gz
+*.7z
+
+# ----------------------------------------------------------
+# Operating system
+# ----------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# ----------------------------------------------------------
+# IDE / editor
+# ----------------------------------------------------------
+.idea/
+.vscode/
+
+# ----------------------------------------------------------
+# Tooling scratch files
+# ----------------------------------------------------------
+*.tmp
+*.temp
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
