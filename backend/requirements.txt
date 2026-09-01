@@ -1,0 +1,16 @@
+torch
+transformers
+accelerate
+peft
+huggingface_hub
+python-dotenv
+safetensors
+fastapi
+uvicorn[standard]
+pydantic
+httpx
+requests
+bitsandbytes
+sentencepiece
+protobuf
+pytest
