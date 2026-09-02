@@ -1,10 +1,16 @@
 import { Bookmark, MoreHorizontal, Sparkles } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
+import { ModelSelector } from "@/features/model-selection/components/model-selector";
+import type { ModelVariant } from "@/features/model-selection/contracts/model-variant";
 
 export function ChatHeader({
   onOpenSavedTrips,
+  selectedModel,
+  onSelectModel,
 }: {
   onOpenSavedTrips: () => void;
+  selectedModel: ModelVariant;
+  onSelectModel: (model: ModelVariant) => void;
 }) {
   return (
     <header className="chat-header">
@@ -24,6 +30,7 @@ export function ChatHeader({
         </div>
       </div>
       <div className="chat-header__actions">
+        <ModelSelector value={selectedModel} onChange={onSelectModel} />
         <span className="preview-badge">
           <span aria-hidden="true" />
           Foundation ready

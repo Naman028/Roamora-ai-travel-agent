@@ -8,7 +8,7 @@ Roamora is a full-stack AI travel-planning application built with Next.js 16 and
 
 - Responsive desktop, tablet, and mobile workspace with chat, current-trip, and saved-trip views.
 - Server-only Next.js API route that validates browser input and securely forwards requests to FastAPI.
-- Base and fine-tuned model selection with configurable Hugging Face/LoRA adapter loading.
+- Accessible per-request Base/Fine-tuned selector with immutable request snapshots, original-model retry, and BFF response verification.
 - Weather, flight, hotel, event, itinerary, and budget service integration.
 - Structured dashboard responses for trip summaries, itineraries, maps, recommendations, weather, events, and budget details.
 - JSON extraction, normalization, schema validation, and safe fallback behavior for model output.
@@ -23,7 +23,7 @@ Roamora is a full-stack AI travel-planning application built with Next.js 16 and
 ```text
 Browser
   |
-  | POST /api/chat
+  | POST /api/chat with explicit model_variant
   v
 Next.js server-only route
   |
@@ -34,7 +34,7 @@ FastAPI /chat
   |-- base or fine-tuned model generation
   |-- JSON guardrails and budget normalization
   v
-Validated dashboard response
+Validated dashboard response with selected_model equality verification
 ```
 
 ```text
@@ -52,7 +52,6 @@ Roamora-ai-travel-agent/
 |   |-- fine_tuning/scripts/  # Adapter loading and JSON guardrails
 |   `-- tests/                # Pytest contract and service tests
 |-- .github/workflows/ci.yml  # Four-job GitHub Actions pipeline
-|-- .github/pull_request_template.md
 |-- .gitignore
 `-- AGENTS.md
 ```
@@ -131,7 +130,7 @@ python -m pytest backend/tests -q -W error
 python -m compileall -q backend/app backend/fine_tuning/scripts
 ```
 
-The current suites contain 45 frontend tests, 45 backend tests, and 16 Playwright tests covering browser integration, responsive layouts, accessibility, output safety, and production security headers.
+The current suites contain 67 frontend tests, 45 backend tests, and 18 Playwright tests covering model selection, browser integration, responsive layouts, accessibility, output safety, and production security headers.
 
 ## Continuous integration
 

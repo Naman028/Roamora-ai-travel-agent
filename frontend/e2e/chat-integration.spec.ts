@@ -3,11 +3,12 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 
 function successBody(
   assistantMessage = "Your thoughtful travel plan is ready.",
+  selectedModel: "base" | "fine_tuned" = "fine_tuned",
 ) {
   return {
     session_id: "demo-user-1",
-    selected_model: "fine_tuned",
-    adapter_loaded: true,
+    selected_model: selectedModel,
+    adapter_loaded: selectedModel === "fine_tuned",
     parse_success: true,
     fallback_used: false,
     retry_used: false,
@@ -19,12 +20,16 @@ function successBody(
   };
 }
 
-async function fulfillSuccess(route: Route, assistantMessage?: string) {
+async function fulfillSuccess(
+  route: Route,
+  assistantMessage?: string,
+  selectedModel: "base" | "fine_tuned" = "fine_tuned",
+) {
   await route.fulfill({
     status: 200,
     contentType: "application/json",
     headers: { "X-Request-ID": "e2e-chat-request-id" },
-    body: JSON.stringify(successBody(assistantMessage)),
+    body: JSON.stringify(successBody(assistantMessage, selectedModel)),
   });
 }
 
@@ -50,6 +55,10 @@ test("one same-origin chat request shows pending then a safe response", async ({
     expect(route.request().method()).toBe("POST");
     expect(route.request().headers()["x-api-key"]).toBeUndefined();
     expect(route.request().url()).toBe("http://127.0.0.1:3000/api/chat");
+    expect(route.request().postDataJSON()).toEqual({
+      message: "Plan a quiet rail trip",
+      model_variant: "fine_tuned",
+    });
     await responseGate;
     await fulfillSuccess(route);
   });
@@ -76,6 +85,57 @@ test("one same-origin chat request shows pending then a safe response", async ({
   expect(
     observedUrls.some((url) => url.includes("127.0.0.1:8000/chat")),
   ).toBe(false);
+});
+
+test("the keyboard-operable selector sends the exact base transport value", async ({
+  page,
+}) => {
+  let observedBody: unknown;
+  await page.route("**/api/chat", async (route) => {
+    observedBody = route.request().postDataJSON();
+    await fulfillSuccess(route, "Base model response.", "base");
+  });
+  await openChat(page);
+
+  const selector = page.getByRole("combobox", { name: "Model" });
+  await expect(selector).toHaveValue("fine_tuned");
+  await selector.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(selector).toHaveValue("base");
+  await expect(selector).toBeFocused();
+
+  const composer = page.getByRole("textbox", {
+    name: "Ask Roamora about your travel idea",
+  });
+  await composer.fill("Compare with the original model");
+  await composer.press("Enter");
+  await expect(page.getByText("Base model response.")).toBeVisible();
+  expect(observedBody).toEqual({
+    message: "Compare with the original model",
+    model_variant: "base",
+  });
+});
+
+test("a mismatched success is shown only as a safe failure", async ({ page }) => {
+  let requestCount = 0;
+  await page.route("**/api/chat", async (route) => {
+    requestCount += 1;
+    await fulfillSuccess(route, "This must not render.", "base");
+  });
+  await openChat(page);
+
+  const composer = page.getByRole("textbox", {
+    name: "Ask Roamora about your travel idea",
+  });
+  await composer.fill("Keep the selected model truthful");
+  await composer.press("Enter");
+
+  await expect(
+    page.getByText("The chat service could not verify the requested model."),
+  ).toBeVisible();
+  await expect(page.getByText("This must not render.")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
+  expect(requestCount).toBe(1);
 });
 
 for (const scenario of [

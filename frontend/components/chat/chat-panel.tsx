@@ -7,10 +7,21 @@ import { MessageList } from "@/components/chat/message-list";
 import { SuggestionChips } from "@/components/chat/suggestion-chips";
 import { ClientChatError } from "@/features/chat/api/send-chat-message";
 import { useChatMutation } from "@/features/chat/hooks/use-chat-mutation";
+import type { ChatMessage } from "@/features/chat/types/chat.types";
 import {
   chatReducer,
   initialChatState,
 } from "@/features/chat/state/chat-reducer";
+import {
+  DEFAULT_MODEL_VARIANT,
+  type ModelVariant,
+} from "@/features/model-selection/contracts/model-variant";
+
+function hasRequestedModel(
+  message: ChatMessage,
+): message is ChatMessage & { requestedModel: ModelVariant } {
+  return message.requestedModel !== undefined;
+}
 
 export function ChatPanel({
   onOpenSavedTrips,
@@ -18,6 +29,9 @@ export function ChatPanel({
   onOpenSavedTrips: () => void;
 }) {
   const [composerValue, setComposerValue] = useState("");
+  const [selectedModel, setSelectedModel] = useState<ModelVariant>(
+    DEFAULT_MODEL_VARIANT,
+  );
   const [chatState, dispatch] = useReducer(chatReducer, initialChatState);
   const activeController = useRef<AbortController | null>(null);
   const cancelledDraftBlocked = useRef(false);
@@ -32,10 +46,16 @@ export function ChatPanel({
     });
   }
 
-  async function runSubmission(value: string, existingUserMessageId?: string) {
+  async function runSubmission(
+    value: string,
+    existingRequest?: {
+      userMessageId: string;
+      requestedModel: ModelVariant;
+    },
+  ) {
     if (
       activeController.current ||
-      (!existingUserMessageId && cancelledDraftBlocked.current)
+      (!existingRequest && cancelledDraftBlocked.current)
     ) {
       return;
     }
@@ -45,11 +65,13 @@ export function ChatPanel({
       return;
     }
 
-    const userMessageId = existingUserMessageId ?? crypto.randomUUID();
+    const requestedModel = existingRequest?.requestedModel ?? selectedModel;
+    const userMessageId =
+      existingRequest?.userMessageId ?? crypto.randomUUID();
     const controller = new AbortController();
     activeController.current = controller;
 
-    if (existingUserMessageId) {
+    if (existingRequest) {
       dispatch({ type: "retry", userMessageId });
     } else {
       dispatch({
@@ -60,13 +82,14 @@ export function ChatPanel({
           kind: "conversation",
           content: message,
           status: "pending",
+          requestedModel,
         },
       });
     }
 
     try {
       const result = await mutation.mutateAsync({
-        input: { message },
+        input: { message, model_variant: requestedModel },
         signal: controller.signal,
       });
       dispatch({
@@ -79,6 +102,7 @@ export function ChatPanel({
           content: result.data.assistant_message,
           status: "completed",
           requestId: result.requestId,
+          requestedModel,
         },
       });
       setComposerValue("");
@@ -122,7 +146,10 @@ export function ChatPanel({
 
   const failedMessage = [...chatState.messages]
     .reverse()
-    .find((message) => message.status === "failed");
+    .find(
+      (message): message is ChatMessage & { requestedModel: ModelVariant } =>
+        message.status === "failed" && hasRequestedModel(message),
+    );
 
   return (
     <section
@@ -130,7 +157,11 @@ export function ChatPanel({
       aria-label="Roamora AI conversation"
       data-testid="chat-panel"
     >
-      <ChatHeader onOpenSavedTrips={onOpenSavedTrips} />
+      <ChatHeader
+        onOpenSavedTrips={onOpenSavedTrips}
+        selectedModel={selectedModel}
+        onSelectModel={setSelectedModel}
+      />
       <div className="chat-panel__body">
         <MessageList messages={chatState.messages} />
       </div>
@@ -154,7 +185,10 @@ export function ChatPanel({
                   onClick={() =>
                     void runSubmission(
                       failedMessage.content,
-                      failedMessage.id,
+                      {
+                        userMessageId: failedMessage.id,
+                        requestedModel: failedMessage.requestedModel,
+                      },
                     )
                   }
                 >

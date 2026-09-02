@@ -13,6 +13,10 @@ import {
   readLimitedBody,
 } from "@/server/backend/read-limited-body";
 import { readBackendEnv } from "@/server/env/backend-env";
+import {
+  MODEL_SELECTION_MISMATCH_CODE,
+  UPSTREAM_MODEL_SELECTION_MISMATCH_MESSAGE,
+} from "@/features/model-selection/contracts/model-selection-errors";
 
 type FailureKind =
   | "client_cancelled"
@@ -54,6 +58,16 @@ function protocolFailure(message: string): BackendChatError {
     "INVALID_UPSTREAM_RESPONSE",
     message,
     true,
+  );
+}
+
+function modelSelectionMismatch(): BackendChatError {
+  return new BackendChatError(
+    "upstream",
+    502,
+    MODEL_SELECTION_MISMATCH_CODE,
+    UPSTREAM_MODEL_SELECTION_MISMATCH_MESSAGE,
+    false,
   );
 }
 
@@ -211,6 +225,9 @@ export async function sendBackendChat(
         throw protocolFailure(
           "The travel service response did not match its contract.",
         );
+      }
+      if (parsed.data.selected_model !== input.model_variant) {
+        throw modelSelectionMismatch();
       }
       return parsed.data;
     }
