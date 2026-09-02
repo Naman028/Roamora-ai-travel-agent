@@ -3,6 +3,7 @@ import type {
   ChatRequest,
   ChatResponse,
 } from "@/features/chat/contracts/chat-contracts";
+import type { ModelVariant } from "@/features/model-selection/contracts/model-variant";
 
 export type MessageStatus =
   | "pending"
@@ -17,6 +18,7 @@ export interface ChatMessage {
   kind: "onboarding" | "conversation";
   status: MessageStatus;
   requestId?: string;
+  requestedModel?: ModelVariant;
 }
 
 export interface ChatState {

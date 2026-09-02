@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { modelVariantSchema } from "@/features/model-selection/contracts/model-variant";
 
 export const CHAT_MESSAGE_MIN_LENGTH = 1;
 export const CHAT_MESSAGE_MAX_LENGTH = 4000;
@@ -16,7 +17,7 @@ export const chatRequestSchema = z
       .trim()
       .min(CHAT_MESSAGE_MIN_LENGTH)
       .max(CHAT_MESSAGE_MAX_LENGTH),
-    model_variant: z.enum(["base", "fine_tuned"]).optional(),
+    model_variant: modelVariantSchema,
     max_new_tokens: z
       .number()
       .int()
@@ -256,7 +257,7 @@ export const dashboardPayloadSchema = z
 export const chatResponseSchema = z
   .object({
     session_id: z.string(),
-    selected_model: z.enum(["base", "fine_tuned"]),
+    selected_model: modelVariantSchema,
     adapter_loaded: z.boolean(),
     parse_success: z.boolean(),
     fallback_used: z.boolean(),

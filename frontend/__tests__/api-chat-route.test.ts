@@ -12,11 +12,11 @@ import {
 const backendUrl = "http://127.0.0.1:8000";
 const backendKey = "server-only-test-key";
 
-function validSuccess() {
+function validSuccess(selectedModel: "base" | "fine_tuned" = "fine_tuned") {
   return {
     session_id: "demo-user-1",
-    selected_model: "fine_tuned",
-    adapter_loaded: true,
+    selected_model: selectedModel,
+    adapter_loaded: selectedModel === "fine_tuned",
     parse_success: true,
     fallback_used: false,
     retry_used: false,
@@ -26,6 +26,18 @@ function validSuccess() {
       intent: "itinerary_generation",
     },
   };
+}
+
+function chatBody(
+  message: string,
+  modelVariant: "base" | "fine_tuned" = "fine_tuned",
+  extra: Record<string, unknown> = {},
+) {
+  return JSON.stringify({
+    message,
+    model_variant: modelVariant,
+    ...extra,
+  });
 }
 
 function request(
@@ -69,8 +81,11 @@ function upstreamJson(
 function mockSuccessfulBackend() {
   return vi.spyOn(globalThis, "fetch").mockImplementation(async (_, init) => {
     const headers = new Headers(init?.headers);
+    const forwarded = JSON.parse(String(init?.body)) as {
+      model_variant: "base" | "fine_tuned";
+    };
     return upstreamJson(
-      validSuccess(),
+      validSuccess(forwarded.model_variant),
       headers.get("X-Request-ID") ?? "missing",
     );
   });
@@ -92,7 +107,7 @@ describe("POST /api/chat", () => {
   it("returns a validated success with no-store and a generated request ID", async () => {
     mockSuccessfulBackend();
     const response = await chatRoute.POST(
-      request(JSON.stringify({ message: "Plan a calm weekend" })),
+      request(chatBody("Plan a calm weekend")),
     );
 
     expect(response.status).toBe(200);
@@ -106,7 +121,7 @@ describe("POST /api/chat", () => {
   it("adds the server key, fixed URL, request ID, and minimum headers upstream", async () => {
     const fetchSpy = mockSuccessfulBackend();
     const response = await chatRoute.POST(
-      request(JSON.stringify({ message: "Plan by train" }), {
+      request(chatBody("Plan by train"), {
         headers: {
           "X-API-Key": "browser-forgery",
           "X-Forwarded-For": "203.0.113.5",
@@ -129,6 +144,55 @@ describe("POST /api/chat", () => {
     expect(init?.cache).toBe("no-store");
   });
 
+  it.each(["base", "fine_tuned"] as const)(
+    "forwards %s to FastAPI unchanged",
+    async (modelVariant) => {
+      const fetchSpy = mockSuccessfulBackend();
+      const response = await chatRoute.POST(
+        request(chatBody("Use the selected model", modelVariant)),
+      );
+
+      expect(response.status).toBe(200);
+      expect(JSON.parse(String(fetchSpy.mock.calls[0][1]?.body))).toMatchObject({
+        model_variant: modelVariant,
+      });
+      expect((await response.json()).selected_model).toBe(modelVariant);
+    },
+  );
+
+  it("requires an explicit browser model selection", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const response = await chatRoute.POST(
+      request(JSON.stringify({ message: "No implicit model" })),
+    );
+
+    expect(response.status).toBe(422);
+    expect((await response.json()).error.fieldErrors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ field: "model_variant" }),
+      ]),
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it.each(["other", "Base", "BASE", "fine-tuned", "finetuned", "Fine_Tuned"])(
+    "rejects unsupported model value %s without calling FastAPI",
+    async (modelVariant) => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      const response = await chatRoute.POST(
+        request(
+          JSON.stringify({
+            message: "Reject aliases",
+            model_variant: modelVariant,
+          }),
+        ),
+      );
+
+      expect(response.status).toBe(422);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    },
+  );
+
   it("rejects a request-supplied backend URL or raw-output flag", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     for (const extra of [
@@ -136,7 +200,7 @@ describe("POST /api/chat", () => {
       { include_raw_model_output: false },
     ]) {
       const response = await chatRoute.POST(
-        request(JSON.stringify({ message: "hello", ...extra })),
+        request(chatBody("hello", "fine_tuned", extra)),
       );
       expect(response.status).toBe(422);
     }
@@ -177,7 +241,7 @@ describe("POST /api/chat", () => {
   it("rejects empty and over-limit messages with 422", async () => {
     for (const message of ["   ", "x".repeat(4001)]) {
       const response = await chatRoute.POST(
-        request(JSON.stringify({ message })),
+        request(chatBody(message)),
       );
       expect(response.status).toBe(422);
       expect((await response.json()).error.code).toBe("VALIDATION_ERROR");
@@ -210,7 +274,7 @@ describe("POST /api/chat", () => {
       });
 
       const response = await chatRoute.POST(
-        request(JSON.stringify({ message: "hello" })),
+        request(chatBody("hello")),
       );
       const payload = await response.json();
       expect(response.status).toBe(status);
@@ -244,7 +308,7 @@ describe("POST /api/chat", () => {
       );
     });
     const response = await chatRoute.POST(
-      request(JSON.stringify({ message: "hello" })),
+      request(chatBody("hello")),
     );
     const payload = await response.json();
 
@@ -256,7 +320,7 @@ describe("POST /api/chat", () => {
   it("returns safe configuration and network failures", async () => {
     delete process.env.BACKEND_API_KEY;
     const configuration = await chatRoute.POST(
-      request(JSON.stringify({ message: "secret prompt" })),
+      request(chatBody("secret prompt")),
     );
     expect(configuration.status).toBe(503);
     expect(await configuration.text()).not.toContain("secret prompt");
@@ -264,7 +328,7 @@ describe("POST /api/chat", () => {
     process.env.BACKEND_API_KEY = backendKey;
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("secret-host"));
     const network = await chatRoute.POST(
-      request(JSON.stringify({ message: "another prompt" })),
+      request(chatBody("another prompt")),
     );
     expect(network.status).toBe(503);
     expect(await network.text()).not.toContain("secret-host");
@@ -282,7 +346,7 @@ describe("POST /api/chat", () => {
     );
 
     const timedOutPromise = chatRoute.POST(
-      request(JSON.stringify({ message: "timeout" })),
+      request(chatBody("timeout")),
     );
     await vi.advanceTimersByTimeAsync(0);
     expect(fetchSpy).toHaveBeenCalledOnce();
@@ -303,7 +367,7 @@ describe("POST /api/chat", () => {
     );
     const controller = new AbortController();
     const cancelledPromise = chatRoute.POST(
-      request(JSON.stringify({ message: "cancel" }), {
+      request(chatBody("cancel"), {
         signal: controller.signal,
       }),
     );
@@ -348,7 +412,7 @@ describe("POST /api/chat", () => {
       ),
     );
     const response = await chatRoute.POST(
-      request(JSON.stringify({ message: "hello" })),
+      request(chatBody("hello")),
     );
     expect(response.status).toBe(502);
     expect((await response.json()).error.code).toBe(
@@ -368,7 +432,7 @@ describe("POST /api/chat", () => {
       );
     });
     const response = await chatRoute.POST(
-      request(JSON.stringify({ message: "hello" })),
+      request(chatBody("hello")),
     );
     expect(response.status).toBe(502);
   });
@@ -379,7 +443,7 @@ describe("POST /api/chat", () => {
     mockSuccessfulBackend();
     const prompt = "private-prompt-value";
     const response = await chatRoute.POST(
-      request(JSON.stringify({ message: prompt })),
+      request(chatBody(prompt)),
     );
     const body = await response.text();
 
@@ -388,6 +452,32 @@ describe("POST /api/chat", () => {
       expect(JSON.stringify(log.mock.calls)).not.toContain(secret);
       expect(JSON.stringify(error.mock.calls)).not.toContain(secret);
     }
+  });
+
+  it("rejects a selected-model mismatch safely without fallback or retry", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async (_, init) => {
+        const requestId =
+          new Headers(init?.headers).get("X-Request-ID") ?? "missing";
+        return upstreamJson(validSuccess("base"), requestId);
+      },
+    );
+
+    const response = await chatRoute.POST(
+      request(chatBody("Keep fine-tuned explicit", "fine_tuned")),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(502);
+    expect(payload.error).toMatchObject({
+      code: "MODEL_SELECTION_MISMATCH",
+      message: "The travel service could not verify the requested model.",
+      retryable: false,
+    });
+    expect(payload.error.requestId).toBe(
+      response.headers.get("X-Request-ID"),
+    );
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("exports POST without implementing another chat method", () => {

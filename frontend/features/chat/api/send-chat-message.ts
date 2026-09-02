@@ -5,6 +5,10 @@ import {
   type ChatRequest,
 } from "@/features/chat/contracts/chat-contracts";
 import type { ChatSuccess } from "@/features/chat/types/chat.types";
+import {
+  CLIENT_MODEL_SELECTION_MISMATCH_MESSAGE,
+  MODEL_SELECTION_MISMATCH_CODE,
+} from "@/features/model-selection/contracts/model-selection-errors";
 
 const SAFE_CLIENT_ERROR: ChatErrorResponse["error"] = {
   code: "INVALID_BFF_RESPONSE",
@@ -87,6 +91,18 @@ export async function sendChatMessage(
       throw new ClientChatError(
         { ...SAFE_CLIENT_ERROR, requestId },
         response.status,
+      );
+    }
+    if (parsed.data.selected_model !== input.model_variant) {
+      throw new ClientChatError(
+        {
+          code: MODEL_SELECTION_MISMATCH_CODE,
+          message: CLIENT_MODEL_SELECTION_MISMATCH_MESSAGE,
+          requestId,
+          retryable: false,
+          fieldErrors: [],
+        },
+        502,
       );
     }
     return { data: parsed.data, requestId };

@@ -254,10 +254,15 @@ def test_disconnected_history_is_explicitly_disabled():
 def test_openapi_publishes_typed_chat_and_error_contracts():
     schema = app.openapi()
     chat_path = schema["paths"]["/chat"]
+    chat_request = schema["components"]["schemas"]["ChatRequest"]
     chat_response = schema["components"]["schemas"]["ChatResponse"]
     dashboard = schema["components"]["schemas"]["DashboardPayload"]
 
     assert set(chat_path) == {"post"}
+    model_variant = chat_request["properties"]["model_variant"]
+    assert model_variant["enum"] == ["base", "fine_tuned"]
+    assert model_variant["default"] == "fine_tuned"
+    assert "model_variant" not in chat_request["required"]
     assert "raw_model_output" not in chat_response["properties"]
     assert dashboard["properties"]["itinerary"]["items"]["$ref"].endswith(
         "/ItineraryItem"
