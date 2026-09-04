@@ -118,9 +118,10 @@ def test_python_dependency_files_are_exact_and_separated():
 
     assert all("==" in line for line in runtime_lines)
     assert all("==" in line for line in ci_lines)
+    assert "anyio==4.14.2" in ci_lines
     assert not any(line.startswith("pytest==") for line in runtime_lines)
     assert any(line.startswith("pytest==") for line in ci_lines)
-    assert not any(line.startswith("httpx2==") for line in ci_lines)
+    assert "httpx2==2.12.0" in ci_lines
     assert "torch==2.13.0" in runtime_lines
     assert "transformers==5.10.1" in runtime_lines
     assert "protobuf==6.33.5" in runtime_lines
