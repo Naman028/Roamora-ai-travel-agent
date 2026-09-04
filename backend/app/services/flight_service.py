@@ -1,9 +1,12 @@
 """
 Flight service using Flight API
 """
+import logging
 from typing import Optional, List
 from backend.app.models.chat_models import FlightInfo
 from backend.app.core.config import get_api_key
+
+logger = logging.getLogger(__name__)
 
 class FlightService:
     """Service for flight information"""
@@ -12,7 +15,9 @@ class FlightService:
         self.api_key = get_api_key("FLIGHT_API_KEY")
 
         if not self.api_key:
-            print("Warning: FLIGHT_API_KEY not found. Flight service will be disabled.")
+            logger.warning(
+                "service_disabled operation=flights reason=missing_api_key"
+            )
     
     async def search_flights(self, origin: str, destination: str, departure_date: str, 
                            return_date: Optional[str] = None) -> Optional[List[FlightInfo]]:

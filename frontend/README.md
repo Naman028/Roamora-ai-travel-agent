@@ -22,4 +22,4 @@ npm run start
 npm run test:e2e
 ```
 
-Run all commands from this `frontend/` directory. The production build uses Next.js standalone output.
+Run all commands from this `frontend/` directory. No provider-specific deployment output is configured; `npm run start` serves the local production build.

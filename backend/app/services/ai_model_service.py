@@ -33,6 +33,7 @@ from backend.app.models.chat_models import (
     DashboardPayload,
     ModelVariant,
 )
+from backend.app.core.observability import log_operation_failure
 from backend.app.services.budget_service import calculate_budget_breakdown
 from backend.app.services.hotel_service import HotelService
 
@@ -308,7 +309,9 @@ async def ensure_flights_for_route(payload: dict, api_context: dict, origin: Opt
             flight_source = "live_api" if flights_list else "static_fallback"
 
         except Exception as exc:
-            logger.error("[ENSURE FLIGHTS ERROR] %s", exc)
+            log_operation_failure(
+                logger, operation="ensure_flights", error=exc
+            )
             flights_list = []
             flight_source = "static_fallback"
 
@@ -356,7 +359,11 @@ async def ensure_flights_for_route(payload: dict, api_context: dict, origin: Opt
         "warnings": warnings
     }
 
-    logger.info("[ENSURE FLIGHTS FINAL] %s", payload.get("flights"))
+    logger.info(
+        "[ENSURE FLIGHTS FINAL] source=%s count=%s",
+        flight_source,
+        len(flights_list),
+    )
 
     return payload
 
@@ -1550,7 +1557,7 @@ async def _build_direct_weather_response(request: ChatRequest, enriched_api_cont
     elif "munich" in request.message.lower():
         location = "Munich"
 
-    logger.info("[DIRECT WEATHER CITY] %s", location)
+    logger.info("[DIRECT WEATHER LOCATION] present=%s", bool(location))
 
     # Extract weather data using robust extractor
     weather_data = extract_live_section(enriched_api_context, "weather")
@@ -1562,8 +1569,10 @@ async def _build_direct_weather_response(request: ChatRequest, enriched_api_cont
             weather_service = WeatherService()
             weather_data = await weather_service.get_current_weather(location)
             logger.info("[DIRECT WEATHER FETCHED] available=%s", bool(weather_data))
-        except Exception as e:
-            logger.error("[DIRECT WEATHER FETCH ERROR] %s", str(e))
+        except Exception as exc:
+            log_operation_failure(
+                logger, operation="direct_weather_fetch", error=exc
+            )
             weather_data = None
 
     weather_status = "available" if weather_data else "unavailable"
@@ -1841,9 +1850,9 @@ def normalize_model_dashboard_payload(payload: dict, backend_intent: str, api_co
     }
     
     logger.info(
-        "[MODEL NORMALIZATION VALIDATED] intent=%s actions=%s",
+        "[MODEL NORMALIZATION VALIDATED] intent=%s action_count=%s",
         payload.get("intent"),
-        payload.get("dashboard_actions", []),
+        len(payload.get("dashboard_actions", [])),
     )
     
     return payload
@@ -2128,7 +2137,7 @@ async def _build_direct_hotel_response(request: ChatRequest, enriched_api_contex
     if destination:
         destination = CITY_ALIASES.get(destination.lower(), destination.title())
     
-    logger.info("[HOTEL SEARCH DESTINATION] %s", destination)
+    logger.info("[HOTEL SEARCH] destination_present=%s", bool(destination))
     
     # If destination is still missing, return error response
     if not destination:
@@ -2322,8 +2331,11 @@ async def _build_direct_flight_response(request: ChatRequest, enriched_api_conte
     origin = origin or travel_info.get("origin")
     destination = destination or travel_info.get("destination")
 
-    logger.info("[FLIGHT EXTRACTED ORIGIN] %s", origin)
-    logger.info("[FLIGHT EXTRACTED DESTINATION] %s", destination)
+    logger.info(
+        "[FLIGHT PARAMETERS] origin_present=%s destination_present=%s",
+        bool(origin),
+        bool(destination),
+    )
 
     if not destination or destination in ["Unknown", "unknown", None, ""]:
         return ChatResponse(
@@ -2395,7 +2407,9 @@ async def _build_direct_flight_response(request: ChatRequest, enriched_api_conte
         logger.info("[CHAT FLIGHT NORMALIZED] count=%s", len(flights_list))
 
     except Exception as exc:
-        logger.error("[CHAT FLIGHT SERVICE ERROR] %s", str(exc))
+        log_operation_failure(
+            logger, operation="direct_flight_search", error=exc
+        )
         flights_list = []
 
     if flights_list:
@@ -2999,16 +3013,10 @@ def _get_model(variant: ModelVariant, config: AdapterConfig):
 
         _unload_current_model()
         if variant == "base":
-            logger.info("Loading base model only: %s", config.base_model_id)
+            logger.info("Loading model variant=base")
             tokenizer, model = load_base_model_only(config)
         else:
-            logger.info(
-                "Loading fine-tuned model: base=%s adapter_repo=%s adapter_type=%s adapter_folder=%s",
-                config.base_model_id,
-                config.adapter_repo_id,
-                config.adapter_repo_type,
-                config.adapter_subfolder,
-            )
+            logger.info("Loading model variant=fine_tuned")
             tokenizer, model = load_base_model_and_adapter(config)
 
         _loaded_model = LoadedModel(variant=variant, tokenizer=tokenizer, model=model)

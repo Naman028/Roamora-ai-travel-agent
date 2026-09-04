@@ -1,0 +1,2 @@
+# Minimum security-fixed transitive required by the Torch runtime graph.
+setuptools==83.0.0

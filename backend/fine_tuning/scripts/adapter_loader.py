@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import os
+import logging
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def has_complete_json_object(text: str) -> bool:
@@ -121,9 +124,9 @@ def _load_peft_adapter(model, config: AdapterConfig):
 
     source = adapter_source(config)
     if isinstance(source, Path):
-        print(f"PEFT adapter load : local folder {source}")
+        logger.info("adapter_load source=local")
         return PeftModel.from_pretrained(model, source)
-    print(f"PEFT adapter load : Hub model repo {source}")
+    logger.info("adapter_load source=hub")
     return PeftModel.from_pretrained(
         model,
         source,
@@ -322,15 +325,10 @@ def generate_text(tokenizer, model, prompt: str, config: AdapterConfig) -> str:
 
 
 def print_config(config: AdapterConfig) -> None:
-    subfolder = config.adapter_subfolder or "<repo root>"
-    print(f"Base model      : {config.base_model_id}")
-    if config.local_adapter_path:
-        print(f"Local adapter   : {config.local_adapter_path}")
-    else:
-        print(f"Adapter repo    : {config.adapter_repo_id}")
-        print(f"Adapter type    : {config.adapter_repo_type}")
-        print(f"Adapter folder  : {subfolder}")
-    print(f"Temperature     : {config.model_temperature}")
-    print(f"Max input tokens: {config.model_max_input_tokens}")
-    print(f"Max new tokens  : {config.model_max_new_tokens}")
-    print(f"HF token present: {bool(config.hf_token)}")
+    """Log only non-sensitive configuration presence metadata."""
+
+    logger.info(
+        "model_configuration adapter_source=%s hf_token_present=%s",
+        "local" if config.local_adapter_path else "hub",
+        bool(config.hf_token),
+    )

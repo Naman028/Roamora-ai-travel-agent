@@ -7,6 +7,7 @@ import os
 from fastapi import status
 
 from backend.app.core.api_errors import ApiContractException
+from backend.app.core.observability import log_operation_failure
 from backend.app.models.chat_models import ChatRequest, ChatResponse
 from backend.app.services.ai_model_service import generate_travel_response
 
@@ -45,10 +46,11 @@ async def run_travel_generation(
     except ApiContractException:
         raise
     except Exception as exc:
-        logger.exception(
-            "Generation failed request_id=%s type=%s",
-            request_id,
-            type(exc).__name__,
+        log_operation_failure(
+            logger,
+            operation="travel_generation",
+            error=exc,
+            request_id=request_id,
         )
         raise ApiContractException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -15,6 +15,17 @@ from starlette.middleware.base import BaseHTTPMiddleware
 # Import config first to ensure environment is loaded
 from backend.app.core.api_errors import ApiContractException
 from backend.app.core.config import load_dotenv_and_get_env
+from backend.app.core.observability import (
+    bind_request_id,
+    log_operation_failure,
+    reset_request_id,
+)
+from backend.app.core.runtime_health import (
+    LivenessResponse,
+    ReadinessResponse,
+    configured_preload_variant,
+    runtime_readiness,
+)
 from backend.app.models.chat_models import ApiError, ApiErrorResponse, FieldError
 from backend.app.routes.chat_router import router as chat_router
 from backend.app.routes.model_test_router import router as model_test_router
@@ -58,7 +69,11 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
             else uuid.uuid4().hex
         )
         request.state.request_id = request_id
-        response = await call_next(request)
+        request_id_token = bind_request_id(request_id)
+        try:
+            response = await call_next(request)
+        finally:
+            reset_request_id(request_id_token)
         response.headers["X-Request-ID"] = request_id
         return response
 
@@ -100,21 +115,25 @@ def _error_response(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _load_backend_env()
-    preload_variant = os.getenv("BACKEND_PRELOAD_MODEL", "fine_tuned").strip()
-    if preload_variant and preload_variant.lower() != "none":
-        print(f"[STARTUP] Loading Wanderly model variant: {preload_variant}")
-        preload_model(preload_variant)  # type: ignore[arg-type]
-        print("[STARTUP] Model ready. Backend can accept requests.")
+    app.state.lifecycle_ready = False
+    preload_variant = configured_preload_variant()
+    if preload_variant is not None:
+        logger.info("runtime_starting preload_mode=%s", preload_variant)
+        preload_model(preload_variant)
+        logger.info("runtime_started model_preloaded=true")
     else:
-        print("[STARTUP] Model preload disabled. First request will lazy-load the selected model.")
+        logger.info("runtime_started model_preloaded=false")
 
-    yield
-
-    print("[SHUTDOWN] Releasing model memory...")
-    unload_models()
-
+    app.state.lifecycle_ready = True
+    try:
+        yield
+    finally:
+        app.state.lifecycle_ready = False
+        logger.info("runtime_stopping")
+        unload_models()
 
 app = FastAPI(title="Wanderly Model Backend", version="0.2.0", lifespan=lifespan)
+app.state.lifecycle_ready = False
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestIdMiddleware)
@@ -199,10 +218,11 @@ async def unexpected_exception_handler(
     request: Request, exc: Exception
 ) -> JSONResponse:
     request_id = _request_id(request)
-    logger.exception(
-        "Unhandled backend exception request_id=%s type=%s",
-        request_id,
-        type(exc).__name__,
+    log_operation_failure(
+        logger,
+        operation="unhandled_request",
+        error=exc,
+        request_id=request_id,
     )
     return _error_response(
         request,
@@ -217,7 +237,31 @@ app.include_router(model_test_router, prefix="/api")
 app.include_router(api_services_router, prefix="/api")
 
 
-@app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+@app.get("/health", response_model=LivenessResponse)
+def health() -> LivenessResponse:
+    """Report process liveness without checking providers or the model."""
+
+    return LivenessResponse()
+
+
+@app.get(
+    "/ready",
+    response_model=ReadinessResponse,
+    responses={503: {"model": ReadinessResponse}},
+)
+def ready(request: Request) -> ReadinessResponse | JSONResponse:
+    """Report cheap runtime readiness without invoking generation."""
+
+    report = runtime_readiness(
+        lifecycle_ready=bool(getattr(request.app.state, "lifecycle_ready", False))
+    )
+    response = ReadinessResponse(
+        status="ready" if report.ready else "not_ready"
+    )
+    if report.ready:
+        return response
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content=response.model_dump(mode="json"),
+    )
 

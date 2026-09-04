@@ -123,7 +123,7 @@ def test_generation_timeout_has_safe_public_error(monkeypatch):
     assert captured.value.retryable is True
 
 
-def test_generation_failure_never_exposes_exception_text(monkeypatch):
+def test_generation_failure_never_exposes_exception_text(monkeypatch, caplog):
     async def failed_generation(_request):
         raise RuntimeError("provider-secret-value")
 
@@ -131,17 +131,21 @@ def test_generation_failure_never_exposes_exception_text(monkeypatch):
         generation_service, "generate_travel_response", failed_generation
     )
 
-    with pytest.raises(ApiContractException) as captured:
-        asyncio.run(
-            generation_service.run_travel_generation(
-                ChatRequest(message="hello"),
-                request_id="failed-request",
+    with caplog.at_level("ERROR"):
+        with pytest.raises(ApiContractException) as captured:
+            asyncio.run(
+                generation_service.run_travel_generation(
+                    ChatRequest(message="hello"),
+                    request_id="failed-request",
+                )
             )
-        )
 
     assert captured.value.status_code == 500
     assert captured.value.code == "GENERATION_FAILED"
     assert "provider-secret-value" not in captured.value.public_message
+    assert "provider-secret-value" not in caplog.text
+    assert "request_id=failed-request" in caplog.text
+    assert "error_type=RuntimeError" in caplog.text
 
 
 def test_upstream_service_errors_are_redacted_from_dashboard_warnings():

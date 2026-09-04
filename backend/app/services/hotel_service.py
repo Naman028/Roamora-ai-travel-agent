@@ -1,12 +1,16 @@
 """
 Hotel service using Booking.com API
 """
+import logging
 import os
 import httpx
 from datetime import date
 from typing import Optional, List
 from backend.app.models.chat_models import HotelInfo
 from backend.app.core.config import get_api_key
+from backend.app.core.observability import log_operation_failure
+
+logger = logging.getLogger(__name__)
 
 class HotelService:
     """Service for hotel information using Booking.com API"""
@@ -17,7 +21,9 @@ class HotelService:
         self.base_url = f"https://{self.rapidapi_host}"
         
         if not self.rapidapi_key:
-            print("Warning: RAPIDAPI_KEY not found. Hotel service will be disabled.")
+            logger.warning(
+                "service_disabled operation=hotels reason=missing_api_key"
+            )
     
     async def search_hotels(self, destination: str, check_in: str, 
                            check_out: str, guests: int = 1) -> Optional[List[HotelInfo]]:
@@ -64,11 +70,6 @@ class HotelService:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.get(url, headers=headers, params=params)
                 
-                # Log rate limit headers
-                rate_limit = response.headers.get('x-ratelimit-requests-limit', 'unknown')
-                rate_remaining = response.headers.get('x-ratelimit-requests-remaining', 'unknown')
-                print(f"Hotel API rate limit: {rate_remaining}/{rate_limit} requests remaining")
-                
                 response.raise_for_status()
                 
                 data = response.json()
@@ -92,11 +93,15 @@ class HotelService:
                 
                 return hotels
                 
-        except httpx.HTTPStatusError as e:
-            print(f"Hotel API HTTP error: {e}")
+        except httpx.HTTPStatusError as exc:
+            log_operation_failure(
+                logger, operation="hotel_search_request", error=exc
+            )
             return None
-        except Exception as e:
-            print(f"Hotel API error: {e}")
+        except Exception as exc:
+            log_operation_failure(
+                logger, operation="hotel_search_parse", error=exc
+            )
             return None
     
     async def _get_destination_id(self, destination: str, headers: dict) -> Optional[str]:
@@ -108,11 +113,6 @@ class HotelService:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(url, headers=headers, params=params)
                 
-                # Log rate limit headers
-                rate_limit = response.headers.get('x-ratelimit-requests-limit', 'unknown')
-                rate_remaining = response.headers.get('x-ratelimit-requests-remaining', 'unknown')
-                print(f"Hotel destination API rate limit: {rate_remaining}/{rate_limit} requests remaining")
-                
                 response.raise_for_status()
                 
                 data = response.json()
@@ -121,16 +121,15 @@ class HotelService:
                 
                 return None
                 
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 429:
-                retry_after = e.response.headers.get('retry-after', 'unknown')
-                print(f"Hotel API rate limit hit. Retry after: {retry_after} seconds")
-                print(f"URL: {e.request.url}")
-            else:
-                print(f"Hotel API HTTP error: {e}")
+        except httpx.HTTPStatusError as exc:
+            log_operation_failure(
+                logger, operation="hotel_destination_request", error=exc
+            )
             return None
-        except httpx.HTTPError as e:
-            print(f"Hotel API connection error: {e}")
+        except httpx.HTTPError as exc:
+            log_operation_failure(
+                logger, operation="hotel_destination_connection", error=exc
+            )
             return None
     
     def _extract_price(self, hotel_data: dict, nights: int) -> dict:
