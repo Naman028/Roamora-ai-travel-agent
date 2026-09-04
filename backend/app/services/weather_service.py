@@ -1,10 +1,15 @@
 """
 Weather service using OpenWeatherMap API
 """
+import logging
+
 import httpx
 from typing import Optional
+from backend.app.core.observability import log_operation_failure
 from backend.app.models.chat_models import WeatherInfo
-from backend.app.core.config import get_api_key, is_service_enabled
+from backend.app.core.config import get_api_key
+
+logger = logging.getLogger(__name__)
 
 class WeatherService:
     """Service for weather information"""
@@ -14,8 +19,9 @@ class WeatherService:
         self.base_url = "https://api.openweathermap.org/data/2.5"
         
         if not self.api_key:
-            print("[WARNING] OPENWEATHERMAP_API_KEY not found. Weather service will be disabled.")
-            print("[INFO] Weather service will return None for all requests.")
+            logger.warning(
+                "service_disabled operation=weather reason=missing_api_key"
+            )
     
     async def get_current_weather(self, city: str) -> Optional[WeatherInfo]:
         """
@@ -41,10 +47,6 @@ class WeatherService:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(url, params=params)
                 
-                # Log rate limit headers
-                rate_limit = response.headers.get('x-ratelimit-remaining', 'unknown')
-                print(f"🌤️ Weather API Rate Limit: {rate_limit} requests remaining")
-                
                 response.raise_for_status()
                 
                 data = response.json()
@@ -57,11 +59,15 @@ class WeatherService:
                     wind_speed=data["wind"]["speed"]
                 )
                 
-        except httpx.HTTPStatusError as e:
-            print(f"Weather API HTTP error: {e}")
+        except httpx.HTTPStatusError as exc:
+            log_operation_failure(
+                logger, operation="weather_current_request", error=exc
+            )
             return None
-        except Exception as e:
-            print(f"Weather API error: {e}")
+        except Exception as exc:
+            log_operation_failure(
+                logger, operation="weather_current_parse", error=exc
+            )
             return None
     
     async def get_weather_forecast(self, city: str, days: int = 5) -> Optional[list]:
@@ -105,11 +111,15 @@ class WeatherService:
                 
                 return forecasts
                 
-        except httpx.HTTPStatusError as e:
-            print(f"Weather forecast HTTP error: {e}")
+        except httpx.HTTPStatusError as exc:
+            log_operation_failure(
+                logger, operation="weather_forecast_request", error=exc
+            )
             return None
-        except Exception as e:
-            print(f"Weather forecast error: {e}")
+        except Exception as exc:
+            log_operation_failure(
+                logger, operation="weather_forecast_parse", error=exc
+            )
             return None
 
 # Global weather service instance

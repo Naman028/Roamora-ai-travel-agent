@@ -61,7 +61,7 @@ Secrets, local environments, dependencies, build output, test reports, caches, a
 ## Technology
 
 - Next.js 16.3.4, React 19, TypeScript, and TanStack Query
-- FastAPI, Pydantic, Python 3.13, and HTTPX
+- FastAPI, Pydantic, Python 3.13.2, and HTTPX
 - Hugging Face Transformers, PEFT/LoRA, PyTorch, and Safetensors
 - Vitest, Testing Library, Pytest, Playwright, and Axe
 - GitHub Actions, npm audit, and pip-audit
@@ -88,7 +88,9 @@ Or start it from WSL/Linux:
 ./backend/start_backend_wsl.sh
 ```
 
-The launchers create a backend virtual environment, install `backend/requirements.txt`, and start `backend.app.main:app` on `http://127.0.0.1:9000` by default. Set `BACKEND_PORT` to use another port.
+The launchers create a backend virtual environment, install the exactly pinned direct runtime dependencies in `backend/requirements.txt`, and start `backend.app.main:app` on `http://127.0.0.1:9000` by default. Recreate the virtual environment after dependency-file changes. Set `BACKEND_PORT` to use another port.
+
+The backend records Python `3.13.2` in `backend/.python-version`. Production/model dependencies live in `backend/requirements.txt`; contract-test dependencies live separately in `backend/requirements-ci.txt` so Pytest is not installed as part of the production runtime. `backend/constraints-runtime.txt` fixes the one security-required Torch transitive. The platform launchers install the official CUDA 12.6 build of the pinned Torch release before installing the remaining runtime requirements, preserving the NVIDIA GPU runtime instead of silently selecting a CPU-only wheel.
 
 ### Frontend
 
@@ -126,20 +128,21 @@ Run deterministic backend checks from the repository root without loading the mo
 
 ```bash
 python -m pip install -r backend/requirements-ci.txt
+python -m pip check
 python -m pytest backend/tests -q -W error
 python -m compileall -q backend/app backend/fine_tuning/scripts
 ```
 
-The current suites contain 67 frontend tests, 45 backend tests, and 18 Playwright tests covering model selection, browser integration, responsive layouts, accessibility, output safety, and production security headers.
+The current suites contain 67 frontend tests, 54 backend tests, and 18 Playwright tests covering model selection, browser integration, responsive layouts, accessibility, output safety, runtime health, logging safety, dependency policy, and production security headers.
 
 ## Continuous integration
 
 GitHub Actions runs on pushes and pull requests targeting `main`. The pipeline contains four independent jobs:
 
 - **Frontend quality:** clean install, lint, type-check, unit tests, and production build.
-- **Backend quality:** isolated CI dependency install, Pytest with warnings treated as errors, and Python compilation.
+- **Backend quality:** isolated CI dependency install, dependency consistency, Pytest with warnings treated as errors, and Python compilation.
 - **Browser E2E:** Chromium installation, production build, responsive behavior, integration tests, and Axe checks.
-- **Dependency security:** npm audit and pip-audit.
+- **Dependency security:** npm audit plus separate pip-audit checks for runtime and CI dependency sets.
 
 CI uses mocked or contract-level integrations. It does not require repository secrets, call paid providers, or download the production language model.
 
@@ -147,7 +150,8 @@ CI uses mocked or contract-level integrations. It does not require repository se
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `GET` | `/health` | Application health check |
+| `GET` | `/health` | Process liveness; no provider or model calls |
+| `GET` | `/ready` | Runtime/configuration readiness; no generation call |
 | `GET` | `/models` | Available model variants |
 | `POST` | `/chat` | Generate a validated travel response |
 | `POST` | `/api/model/test` | Exercise the configured model through the protected contract |
@@ -157,11 +161,13 @@ CI uses mocked or contract-level integrations. It does not require repository se
 | `GET` | `/api/events/{city}` | Retrieve local event context |
 | `POST` | `/api/itinerary/generate` | Generate an itinerary from service context |
 
-Protected backend endpoints require the `X-API-Key` header. The browser communicates through the same-origin frontend `POST /api/chat` route, so the backend URL and API key remain server-only.
+Protected backend endpoints require the `X-API-Key` header. The browser communicates through the same-origin frontend `POST /api/chat` route, so the backend URL and API key remain server-only. The deprecated `/api/health` endpoint remains only as a compatibility alias; new operational checks should use `/health` and `/ready`.
+
+`/ready` returns `503 {"status":"not_ready"}` until application startup completes, when `BACKEND_PRELOAD_MODEL` is invalid, or when production mode lacks a backend API key. With lazy loading (`BACKEND_PRELOAD_MODEL=none`), readiness confirms runtime configuration, not that a first model generation or external provider call will succeed.
 
 ## Production notes
 
-The frontend uses Next.js standalone output. Build it inside `frontend/`, then deploy `.next/standalone` with `.next/static` and any files under `public/` used by the application.
+No deployment topology is selected. Validate the frontend with `npm run build` and run the local production server with `npm run start`; add provider-specific packaging only in a separately approved deployment phase.
 
 Run one Uvicorn worker per loaded model process unless memory profiling confirms that more workers fit. Use `BACKEND_ENV=production`, a strong `BACKEND_API_KEY`, explicit `BACKEND_CORS_ORIGINS`, and deployment-managed secrets.
 

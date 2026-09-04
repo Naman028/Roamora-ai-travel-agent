@@ -1,5 +1,5 @@
 # Deterministic dependencies for backend contract tests and CI only.
-# Runtime/model dependency separation remains a dedicated packaging task.
+anyio==4.14.2
 fastapi==0.141.1
 httpx==0.28.1
 httpx2==2.12.0

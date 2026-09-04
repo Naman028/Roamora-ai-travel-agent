@@ -11,12 +11,17 @@ VENV_DIR="$SCRIPT_DIR/.venv-linux"
 echo "[WSL] Project root : $PROJECT_ROOT"
 echo "[WSL] Backend dir  : $SCRIPT_DIR"
 
-# ── Python environment ──────────────────────────────────────────────────────
+# ── Python environment ────────────────────────────────────────────────────
 if [ ! -d "$VENV_DIR" ]; then
     echo "[WSL] Creating Linux venv at $VENV_DIR ..."
     python3 -m venv "$VENV_DIR"
     echo "[WSL] Installing dependencies..."
     "$VENV_DIR/bin/pip" install --upgrade pip --quiet
+    "$VENV_DIR/bin/pip" install \
+        --no-deps \
+        --index-url https://download.pytorch.org/whl/cu126 \
+        "torch==2.13.0+cu126" \
+        --quiet
     "$VENV_DIR/bin/pip" install -r "$SCRIPT_DIR/requirements.txt" --quiet
 fi
 

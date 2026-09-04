@@ -17,6 +17,11 @@ if (-not (Test-Path $VenvDir)) {
 
     Write-Host "[Windows] Installing dependencies..."
     & $PythonExe -m pip install --upgrade pip --quiet
+    & $PythonExe -m pip install `
+        --no-deps `
+        --index-url https://download.pytorch.org/whl/cu126 `
+        "torch==2.13.0+cu126" `
+        --quiet
     & $PythonExe -m pip install -r (Join-Path $ScriptDir "requirements.txt") --quiet
 
 }

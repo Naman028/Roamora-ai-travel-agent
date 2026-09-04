@@ -1,16 +1,17 @@
-torch
-transformers
-accelerate
-peft
-huggingface_hub
-python-dotenv
-safetensors
-fastapi
-uvicorn[standard]
-pydantic
-httpx
-requests
-bitsandbytes
-sentencepiece
-protobuf
-pytest
+# Production runtime dependencies. Keep every direct dependency exactly pinned.
+-c constraints-runtime.txt
+
+torch==2.13.0
+transformers==5.10.1
+accelerate==1.13.0
+peft==0.19.1
+huggingface_hub==1.13.0
+python-dotenv==1.2.3
+safetensors==0.8.0rc0
+fastapi==0.141.1
+uvicorn[standard]==0.34.0
+pydantic==2.12.4
+httpx==0.28.1
+bitsandbytes==0.49.2
+sentencepiece==0.2.1
+protobuf==6.33.5

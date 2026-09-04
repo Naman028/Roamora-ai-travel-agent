@@ -6,7 +6,8 @@ import httpx
 import logging
 from typing import Optional, List
 from backend.app.models.chat_models import EventInfo
-from backend.app.core.config import get_api_key, is_service_enabled
+from backend.app.core.config import get_api_key
+from backend.app.core.observability import log_operation_failure
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,9 @@ class EventsService:
         self.base_url = "https://app.ticketmaster.com/discovery/v2"
         
         if not self.api_key:
-            logger.warning("TICKETMASTER_API_KEY not found. Events service will be disabled.")
+            logger.warning(
+                "service_disabled operation=events reason=missing_api_key"
+            )
     
     async def search_events(self, city: str, start_date: Optional[str] = None, 
                            end_date: Optional[str] = None, category: Optional[str] = None) -> Optional[List[EventInfo]]:
@@ -35,7 +38,6 @@ class EventsService:
             List of EventInfo objects or None if error
         """
         if not self.api_key:
-            logger.warning("No Ticketmaster API key available")
             return None
         
         url = f"{self.base_url}/events.json"
@@ -68,19 +70,13 @@ class EventsService:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.get(url, params=params)
                 
-                # Log status code and response internally
-                logger.info(f"Ticketmaster API Status: {response.status_code}")
-                logger.info(f"Request URL: {response.url}")
-                
                 response.raise_for_status()
                 
                 data = response.json()
-                logger.info(f"Ticketmaster response keys: {list(data.keys())}")
                 
                 events = []
                 
                 if "_embedded" in data and "events" in data["_embedded"]:
-                    logger.info(f"Found {len(data['_embedded']['events'])} events")
                     for event_data in data["_embedded"]["events"]:
                         event = EventInfo(
                             name=event_data.get("name", "Unknown Event"),
@@ -91,19 +87,21 @@ class EventsService:
                             url=self._extract_event_url(event_data)
                         )
                         events.append(event)
-                else:
-                    logger.info("No _embedded.events found in response")
-                    logger.info(f"Response structure: {data}")
+                logger.info(
+                    "provider_result operation=events result_count=%s", len(events)
+                )
                 
                 return events
                 
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Events API HTTP error: {e}")
-            logger.error(f"Response status: {e.response.status_code}")
-            logger.error(f"Response text: {e.response.text[:500]}")
+        except httpx.HTTPStatusError as exc:
+            log_operation_failure(
+                logger, operation="events_search_request", error=exc
+            )
             return None
-        except Exception as e:
-            logger.error(f"Events API error: {e}")
+        except Exception as exc:
+            log_operation_failure(
+                logger, operation="events_search_parse", error=exc
+            )
             return None
     
     def _extract_event_date(self, event_data: dict) -> str:
@@ -120,8 +118,10 @@ class EventsService:
                 return date
             else:
                 return "Date not available"
-        except Exception as e:
-            logger.error(f"Error extracting date: {e}")
+        except Exception as exc:
+            log_operation_failure(
+                logger, operation="event_date_extract", error=exc
+            )
             return "Date not available"
     
     def _extract_event_location(self, event_data: dict) -> str:
@@ -145,8 +145,10 @@ class EventsService:
                     location_parts.append(country)
                 
                 return ", ".join(location_parts) if location_parts else "Location not available"
-        except Exception as e:
-            logger.error(f"Error extracting location: {e}")
+        except Exception as exc:
+            log_operation_failure(
+                logger, operation="event_location_extract", error=exc
+            )
             return "Location not available"
     
     def _extract_event_category(self, event_data: dict) -> str:
@@ -163,8 +165,10 @@ class EventsService:
                     return segment
                 elif genre:
                     return genre
-        except Exception as e:
-            logger.error(f"Error extracting category: {e}")
+        except Exception as exc:
+            log_operation_failure(
+                logger, operation="event_category_extract", error=exc
+            )
             return "General"
     
     def _extract_event_price(self, event_data: dict) -> Optional[str]:
@@ -181,16 +185,20 @@ class EventsService:
                     return f"{currency} {min_price}-{max_price}"
                 elif min_price:
                     return f"{currency} {min_price}+"
-        except Exception as e:
-            logger.error(f"Error extracting price: {e}")
+        except Exception as exc:
+            log_operation_failure(
+                logger, operation="event_price_extract", error=exc
+            )
             return None
     
     def _extract_event_url(self, event_data: dict) -> str:
         """Extract event URL from event data"""
         try:
             return event_data.get("url", "")
-        except Exception as e:
-            logger.error(f"Error extracting URL: {e}")
+        except Exception as exc:
+            log_operation_failure(
+                logger, operation="event_url_extract", error=exc
+            )
             return ""
 
 # Global events service instance

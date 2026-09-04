@@ -51,11 +51,16 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.13"
+          python-version: "3.13.2"
           cache: pip
-          cache-dependency-path: backend/requirements-ci.txt
+          cache-dependency-path: |
+            backend/constraints-runtime.txt
+            backend/requirements.txt
+            backend/requirements-ci.txt
       - name: Install contract-test dependencies
         run: python -m pip install --disable-pip-version-check -r backend/requirements-ci.txt
+      - name: Check installed dependency consistency
+        run: python -m pip check
       - name: Run backend tests
         run: python -m pytest backend/tests -q -W error
       - name: Compile backend source
@@ -105,10 +110,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.13"
+          python-version: "3.13.2"
           cache: pip
-          cache-dependency-path: backend/requirements-ci.txt
+          cache-dependency-path: |
+            backend/constraints-runtime.txt
+            backend/requirements.txt
+            backend/requirements-ci.txt
       - name: Install Python audit tool
         run: python -m pip install --disable-pip-version-check pip-audit==2.10.1
       - name: Audit backend CI dependencies
         run: python -m pip_audit -r backend/requirements-ci.txt
+      - name: Audit backend runtime dependencies
+        run: python -m pip_audit -r backend/requirements.txt

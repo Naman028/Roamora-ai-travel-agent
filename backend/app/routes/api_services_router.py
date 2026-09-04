@@ -8,6 +8,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel, Field
 
 from backend.app.core.api_errors import ApiContractException
+from backend.app.core.observability import log_operation_failure
 from backend.app.core.request_controls import generation_request_guard
 from backend.app.core.security import require_api_key
 from backend.app.models.chat_models import (
@@ -68,8 +69,8 @@ async def get_weather(
         if not weather:
             return {"message": f"Weather information not available for {city}", "data": None}
         return {"message": "Weather data retrieved successfully", "data": weather}
-    except Exception as e:
-        logger.error(f"Error fetching weather for {city}: {str(e)}")
+    except Exception as exc:
+        log_operation_failure(logger, operation="weather_route", error=exc)
         raise HTTPException(status_code=500, detail="Error fetching weather information")
 
 
@@ -104,8 +105,8 @@ async def search_flights(
         return {"message": "Flights found successfully", "data": flights}
     except ApiContractException:
         raise
-    except Exception as e:
-        logger.error(f"Error searching flights from {origin} to {destination}: {str(e)}")
+    except Exception as exc:
+        log_operation_failure(logger, operation="flight_search_route", error=exc)
         raise HTTPException(status_code=500, detail="Error searching flights")
 
 
@@ -140,8 +141,8 @@ async def search_hotels(
         return {"message": "Hotels found successfully", "data": hotels}
     except ApiContractException:
         raise
-    except Exception as e:
-        logger.error(f"Error searching hotels in {destination}: {str(e)}")
+    except Exception as exc:
+        log_operation_failure(logger, operation="hotel_search_route", error=exc)
         raise HTTPException(status_code=500, detail="Error searching hotels")
 
 
@@ -202,8 +203,8 @@ async def get_events(
         }
     except ApiContractException:
         raise
-    except Exception as e:
-        logger.error(f"Error fetching events for {city}: {str(e)}")
+    except Exception as exc:
+        log_operation_failure(logger, operation="events_route", error=exc)
         raise HTTPException(status_code=500, detail="Error fetching events")
 
 
@@ -232,8 +233,8 @@ async def generate_itinerary(
             destination, duration_days, preferences or []
         )
         return {"message": "Itinerary generated successfully", "data": itinerary}
-    except Exception as e:
-        logger.error(f"Error generating itinerary for {destination}: {str(e)}")
+    except Exception as exc:
+        log_operation_failure(logger, operation="itinerary_route", error=exc)
         raise HTTPException(status_code=500, detail="Error generating itinerary")
 
 
@@ -283,7 +284,7 @@ async def clear_chat_history(
     )
 
 
-@router.get("/health")
+@router.get("/health", deprecated=True)
 async def health_check():
-    """Health check endpoint"""
+    """Legacy compatibility alias; use the root /health endpoint."""
     return {"status": "healthy", "service": "api services router"}
