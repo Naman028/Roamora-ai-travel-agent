@@ -1,0 +1,111 @@
+{
+  "schema_version": "roamora_provider_fixtures_v1",
+  "fixtures": [
+    {
+      "fixture_id": "berlin_paris_success",
+      "states": {"weather": "success", "flights": "success", "hotels": "success", "events": "success"},
+      "results": {
+        "weather": {"provider_id": "wx-par-001", "location": "Paris", "temperature": 16.0, "temperature_c": 16.0, "description": "light clouds", "humidity": 61, "wind_speed": 9.0},
+        "flights": [{"provider_id": "flt-ber-par-001", "origin": "Berlin", "destination": "Paris", "departure_date": "2030-04-10", "return_date": "2030-04-13", "price": "EUR 214", "currency": "EUR", "airline": "Fixture Air", "flight_number": "FX101", "source": "live_api"}],
+        "hotels": [{"provider_id": "htl-par-001", "name": "Fixture Left Bank Hotel", "location": "Paris", "price_per_night": 92, "price_total": 276, "currency": "EUR", "pricing_basis": "per_night", "source": "live_api", "rating": 4.2, "amenities": ["step-free entrance"]}],
+        "events": [{"provider_id": "evt-par-001", "name": "Fixture Spring Exhibition", "date": "2030-04-11", "location": "Fixture Gallery", "category": "exhibition", "price": "EUR 12", "url": "https://example.invalid/events/evt-par-001"}]
+      },
+      "authoritative_ids": ["wx-par-001", "flt-ber-par-001", "htl-par-001", "evt-par-001"],
+      "notes": "Synthetic successful responses for deterministic evaluation only."
+    },
+    {
+      "fixture_id": "munich_rome_success",
+      "states": {"weather": "success", "flights": "success", "hotels": "success", "events": "success"},
+      "results": {
+        "weather": {"provider_id": "wx-rom-001", "location": "Rome", "temperature": 21.0, "temperature_c": 21.0, "description": "clear", "humidity": 48, "wind_speed": 6.0},
+        "flights": [{"provider_id": "flt-muc-rom-001", "origin": "Munich", "destination": "Rome", "departure_date": "2030-05-02", "return_date": "2030-05-05", "price": "EUR 189", "currency": "EUR", "airline": "Fixture Air", "flight_number": "FX202", "source": "live_api"}],
+        "hotels": [{"provider_id": "htl-rom-001", "name": "Fixture Trastevere House", "location": "Rome", "price_per_night": 88, "price_total": 264, "currency": "EUR", "pricing_basis": "per_night", "source": "live_api", "rating": 4.1, "amenities": ["lift"]}],
+        "events": [{"provider_id": "evt-rom-001", "name": "Fixture Courtyard Concert", "date": "2030-05-03", "location": "Fixture Courtyard", "category": "concert", "price": "EUR 18", "url": "https://example.invalid/events/evt-rom-001"}]
+      },
+      "authoritative_ids": ["wx-rom-001", "flt-muc-rom-001", "htl-rom-001", "evt-rom-001"],
+      "notes": "Second disjoint successful scenario."
+    },
+    {
+      "fixture_id": "weather_only_success",
+      "states": {"weather": "success", "flights": "empty", "hotels": "empty", "events": "empty"},
+      "results": {
+        "weather": {"provider_id": "wx-ber-002", "location": "Berlin", "temperature": 7.0, "temperature_c": 7.0, "description": "rain", "humidity": 79, "wind_speed": 14.0},
+        "flights": [], "hotels": [], "events": []
+      },
+      "authoritative_ids": ["wx-ber-002"],
+      "notes": "Only weather returns data."
+    },
+    {
+      "fixture_id": "flight_only_success",
+      "states": {"weather": "empty", "flights": "success", "hotels": "empty", "events": "empty"},
+      "results": {
+        "weather": null,
+        "flights": [{"provider_id": "flt-ham-mad-003", "origin": "Hamburg", "destination": "Madrid", "departure_date": "2030-06-10", "return_date": "2030-06-14", "price": "EUR 241", "currency": "EUR", "airline": "Fixture Air", "flight_number": "FX303", "source": "live_api"}],
+        "hotels": [], "events": []
+      },
+      "authoritative_ids": ["flt-ham-mad-003"],
+      "notes": "Only flights return data."
+    },
+    {
+      "fixture_id": "hotel_only_success",
+      "states": {"weather": "empty", "flights": "empty", "hotels": "success", "events": "empty"},
+      "results": {
+        "weather": null, "flights": [],
+        "hotels": [{"provider_id": "htl-lis-004", "name": "Fixture Alfama Guesthouse", "location": "Lisbon", "price_per_night": 74, "price_total": 222, "currency": "EUR", "pricing_basis": "per_night", "source": "live_api", "rating": 4.0, "amenities": ["quiet room"]}],
+        "events": []
+      },
+      "authoritative_ids": ["htl-lis-004"],
+      "notes": "Only hotels return data."
+    },
+    {
+      "fixture_id": "events_only_success",
+      "states": {"weather": "empty", "flights": "empty", "hotels": "empty", "events": "success"},
+      "results": {
+        "weather": null, "flights": [], "hotels": [],
+        "events": [{"provider_id": "evt-vie-005", "name": "Fixture Chamber Music Night", "date": "2030-07-08", "location": "Fixture Hall", "category": "concert", "price": "EUR 15", "url": "https://example.invalid/events/evt-vie-005"}]
+      },
+      "authoritative_ids": ["evt-vie-005"],
+      "notes": "Only events return data."
+    },
+    {
+      "fixture_id": "all_empty",
+      "states": {"weather": "empty", "flights": "empty", "hotels": "empty", "events": "empty"},
+      "results": {"weather": null, "flights": [], "hotels": [], "events": []},
+      "authoritative_ids": [],
+      "notes": "Every provider completes with no data."
+    },
+    {
+      "fixture_id": "all_timeout",
+      "states": {"weather": "timeout", "flights": "timeout", "hotels": "timeout", "events": "timeout"},
+      "results": {"weather": null, "flights": [], "hotels": [], "events": []},
+      "authoritative_ids": [],
+      "notes": "Every provider raises an immediate controlled TimeoutError."
+    },
+    {
+      "fixture_id": "all_unavailable",
+      "states": {"weather": "unavailable", "flights": "unavailable", "hotels": "unavailable", "events": "unavailable"},
+      "results": {"weather": null, "flights": null, "hotels": null, "events": null},
+      "authoritative_ids": [],
+      "notes": "Every provider reports unavailable."
+    },
+    {
+      "fixture_id": "all_malformed",
+      "states": {"weather": "malformed", "flights": "malformed", "hotels": "malformed", "events": "malformed"},
+      "results": {"weather": "not-an-object", "flights": {"unexpected": true}, "hotels": "not-a-list", "events": {"data": "not-a-list"}},
+      "authoritative_ids": [],
+      "notes": "Malformed shapes exercise current provider-boundary handling."
+    },
+    {
+      "fixture_id": "unseen_kyoto_context",
+      "states": {"weather": "success", "flights": "empty", "hotels": "success", "events": "success"},
+      "results": {
+        "weather": {"provider_id": "wx-kyo-006", "location": "Kyoto", "temperature": 19.0, "temperature_c": 19.0, "description": "overcast", "humidity": 66, "wind_speed": 5.0},
+        "flights": [],
+        "hotels": [{"provider_id": "htl-kyo-006", "name": "Fixture Higashiyama Inn", "location": "Kyoto", "price_per_night": 103, "price_total": 309, "currency": "EUR", "pricing_basis": "per_night", "source": "live_api", "rating": 4.3, "amenities": ["accessible shower"]}],
+        "events": [{"provider_id": "evt-kyo-006", "name": "Fixture Craft Demonstration", "date": "2030-10-04", "location": "Fixture Workshop", "category": "culture", "price": "EUR 9", "url": "https://example.invalid/events/evt-kyo-006"}]
+      },
+      "authoritative_ids": ["wx-kyo-006", "htl-kyo-006", "evt-kyo-006"],
+      "notes": "Destination is intentionally absent from the application's built-in city list."
+    }
+  ]
+}
