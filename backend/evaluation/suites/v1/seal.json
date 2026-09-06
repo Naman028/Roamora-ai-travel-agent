@@ -1,0 +1,23 @@
+{
+  "schema_version": "roamora_evaluation_seal_v1",
+  "suite_version": "v1",
+  "files": [
+    {
+      "path": "data/provider_fixtures.json",
+      "sha256": "ea0530d5607bfbffb70b663139c8a10393a88b6f277e19adf823aef3d33be3da"
+    },
+    {
+      "path": "data/application_states.json",
+      "sha256": "5f2d81d15d87cf54ef8ccea12b3e1337e1864e2784d23a724c417dd0d1a53788"
+    },
+    {
+      "path": "suites/v1/development.json",
+      "sha256": "6960d663e00e8fdf36fc3550dc2f604c50fa21540c007f6408a24539fdf68d26"
+    },
+    {
+      "path": "suites/v1/final.json",
+      "sha256": "7b72316f59afc9f068cb74cda6b5f5e6c83767696dc990459b1388ad348a4a99"
+    }
+  ],
+  "combined_sha256": "507660fc83b6bc7cbe78fd0da7d81bd0f23c33419546a64cd5f186c4ae52e804"
+}

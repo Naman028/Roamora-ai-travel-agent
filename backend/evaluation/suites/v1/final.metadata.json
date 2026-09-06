@@ -1,0 +1,14 @@
+{
+  "schema_version": "roamora_final_holdout_metadata_v1",
+  "suite_version": "v1",
+  "split": "final",
+  "sealed": true,
+  "review_status": "pending_human_review",
+  "authored_utc": "2026-09-05T00:00:00Z",
+  "logical_seal_path": "suites/v1/final.json",
+  "suite_sha256": "7b72316f59afc9f068cb74cda6b5f5e6c83767696dc990459b1388ad348a4a99",
+  "case_count": 16,
+  "turn_count": 17,
+  "storage": "external_private_path_required",
+  "path_environment_variable": "ROAMORA_FINAL_EVALUATION_SUITE_PATH"
+}

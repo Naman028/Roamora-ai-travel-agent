@@ -1,0 +1,247 @@
+{
+  "schema_version": "roamora_evaluation_suite_v1",
+  "suite_version": "v1",
+  "split": "development",
+  "sealed": true,
+  "review_status": "pending_human_review",
+  "authored_utc": "2026-09-05T00:00:00Z",
+  "cases": [
+    {
+      "case_id": "dev_clean_en_plan",
+      "scenario_family": "dev_central_europe_clean_plan",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["clean_english", "itinerary", "provider_success", "grounding"], "notes": "Canonical grounded itinerary.",
+      "turns": [{"message": "Plan a 3-day trip from Berlin to Paris with a EUR 600 budget.", "provider_fixture_id": "berlin_paris_success", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 3, "budget": 600}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"], "allowed_grounding_ids": ["wx-par-001", "flt-ber-par-001", "htl-par-001", "evt-par-001"]}}]
+    },
+    {
+      "case_id": "dev_broken_en_plan",
+      "scenario_family": "dev_broken_grammar_city_break",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["broken_english", "itinerary", "constraint_extraction"], "notes": "Broken grammar retains explicit fields.",
+      "turns": [{"message": "me need trip Berlin Paris 3 day cheap budget 500 euro", "provider_fixture_id": "berlin_paris_success", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 3, "budget": 500}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"]}}]
+    },
+    {
+      "case_id": "dev_typo_plan",
+      "scenario_family": "dev_typo_german_origin",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["typos", "itinerary", "constraint_extraction"], "notes": "Existing city alias should normalize Stuttgart.",
+      "turns": [{"message": "Plan 2 day trip frm Sttugart to Paris under EUR 450", "provider_fixture_id": "berlin_paris_success", "travel_info": {"origin": "Stuttgart", "destination": "Paris", "duration_days": 2, "budget": 450}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"]}}]
+    },
+    {
+      "case_id": "dev_shorthand_plan",
+      "scenario_family": "dev_shorthand_weekend",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["shorthand", "itinerary", "vague_budget"], "notes": "Compact travel shorthand.",
+      "turns": [{"message": "BER > PAR wknd trip, 2 ppl, low cost", "provider_fixture_id": "berlin_paris_success", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 2, "guests": 2, "budget": "low"}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": [], "requires_clarification": true, "must_include_terms": ["trip"]}}]
+    },
+    {
+      "case_id": "dev_asr_plan",
+      "scenario_family": "dev_asr_punctuation_loss",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["asr_like", "itinerary", "constraint_extraction"], "notes": "ASR-like transcript without punctuation.",
+      "turns": [{"message": "okay plan me a trip from munich to rome three days about five hundred euros and less walking", "provider_fixture_id": "munich_rome_success", "travel_info": {"origin": "Munich", "destination": "Rome", "duration_days": 3, "budget": 500}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"], "must_include_terms": ["trip"]}}]
+    },
+    {
+      "case_id": "dev_missing_destination",
+      "scenario_family": "dev_missing_required_destination",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["missing_fields", "clarification", "truthfulness"], "notes": "Destination is intentionally absent.",
+      "turns": [{"message": "Plan a 3-day trip from Berlin for EUR 400.", "provider_fixture_id": "all_empty", "travel_info": {"origin": "Berlin", "destination": null, "duration_days": 3, "budget": 400}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": [], "requires_clarification": true, "must_include_terms": ["destination"]}}]
+    },
+    {
+      "case_id": "dev_ambiguous_origin",
+      "scenario_family": "dev_ambiguous_city_role",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["ambiguous_fields", "clarification"], "notes": "Two cities without direction.",
+      "turns": [{"message": "Paris or Rome trip for three days, I have EUR 500.", "provider_fixture_id": "all_empty", "travel_info": {"origin": null, "destination": null, "duration_days": 3, "budget": 500}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "hotels", "events"], "requires_clarification": true}}]
+    },
+    {
+      "case_id": "dev_no_budget",
+      "scenario_family": "dev_budget_absent_city_break",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["no_budget", "budget", "itinerary"], "notes": "Captures the current implicit EUR 500 behavior.",
+      "turns": [{"message": "Plan a 3-day trip from Munich to Rome.", "provider_fixture_id": "munich_rome_success", "travel_info": {"origin": "Munich", "destination": "Rome", "duration_days": 3, "budget": null}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"]}}]
+    },
+    {
+      "case_id": "dev_vague_budget",
+      "scenario_family": "dev_budget_vague_affordable",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["vague_budget", "budget", "clarification"], "notes": "No numeric ceiling.",
+      "turns": [{"message": "Plan an affordable 3-day trip from Berlin to Paris.", "provider_fixture_id": "berlin_paris_success", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 3, "budget": "low"}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"]}}]
+    },
+    {
+      "case_id": "dev_impossible_budget",
+      "scenario_family": "dev_budget_impossible_intercity",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["impossible_budget", "budget", "truthfulness"], "notes": "Authoritative transport alone exceeds budget.",
+      "turns": [{"message": "Plan a 3-day trip from Berlin to Paris for no more than EUR 50.", "provider_fixture_id": "berlin_paris_success", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 3, "budget": 50}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"], "must_not_include_terms": ["within your budget"]}}]
+    },
+    {
+      "case_id": "dev_reduced_walking",
+      "scenario_family": "dev_accessibility_mobility",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["accessibility", "reduced_walking", "itinerary"], "notes": "Mobility constraint should survive planning.",
+      "turns": [{"message": "Plan a 3-day trip from Munich to Rome with reduced walking and step-free options.", "provider_fixture_id": "munich_rome_success", "travel_info": {"origin": "Munich", "destination": "Rome", "duration_days": 3}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"], "must_include_terms": ["trip"]}}]
+    },
+    {
+      "case_id": "dev_grounded_hotel_choice",
+      "scenario_family": "dev_grounded_option_identifier",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["grounded_choices", "stable_ids", "option_selection"], "notes": "Tests whether a supplied stable ID survives.",
+      "turns": [{"message": "Plan a Paris trip and choose hotel option htl-par-001.", "provider_fixture_id": "berlin_paris_success", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 3}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"], "expected_selected_ids": ["htl-par-001"], "allowed_grounding_ids": ["htl-par-001"]}}]
+    },
+    {
+      "case_id": "dev_provider_weather_success",
+      "scenario_family": "dev_direct_weather_available",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["provider_success", "weather", "intent_routing"], "notes": "Exposes enrichment/direct routing stages.",
+      "turns": [{"message": "What is the weather in Berlin?", "provider_fixture_id": "weather_only_success", "travel_info": {"destination": "Berlin", "duration_days": 1}, "expectation": {"intent": "weather_query", "expected_provider_calls": ["weather"], "allowed_grounding_ids": ["wx-ber-002"]}}]
+    },
+    {
+      "case_id": "dev_provider_flight_success",
+      "scenario_family": "dev_direct_flight_available",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["provider_success", "flights", "intent_routing"], "notes": "Controlled flight lookup.",
+      "turns": [{"message": "Find a flight from Hamburg to Madrid.", "provider_fixture_id": "flight_only_success", "travel_info": {"origin": "Hamburg", "destination": "Madrid", "duration_days": 4}, "expectation": {"intent": "flight_search", "expected_provider_calls": ["flights"], "allowed_grounding_ids": ["flt-ham-mad-003"]}}]
+    },
+    {
+      "case_id": "dev_provider_hotel_success",
+      "scenario_family": "dev_direct_hotel_available",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["provider_success", "hotels", "intent_routing"], "notes": "Controlled hotel lookup.",
+      "turns": [{"message": "Find a hotel in Lisbon for three nights.", "provider_fixture_id": "hotel_only_success", "travel_info": {"destination": "Lisbon", "duration_days": 3}, "expectation": {"intent": "hotel_search", "expected_provider_calls": ["hotels"], "allowed_grounding_ids": ["htl-lis-004"]}}]
+    },
+    {
+      "case_id": "dev_provider_event_success",
+      "scenario_family": "dev_direct_event_available",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["provider_success", "events", "intent_routing"], "notes": "Current explicit-event routing is measured.",
+      "turns": [{"message": "What events are on in Vienna?", "provider_fixture_id": "events_only_success", "travel_info": {"destination": "Vienna", "duration_days": 1}, "expectation": {"intent": "events_search", "expected_provider_calls": ["events"], "allowed_grounding_ids": ["evt-vie-005"]}}]
+    },
+    {
+      "case_id": "dev_provider_empty",
+      "scenario_family": "dev_all_providers_empty",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["provider_empty", "fallback", "truthfulness"], "notes": "Measures reachable static fallbacks.",
+      "turns": [{"message": "Plan a 3-day trip from Berlin to Paris.", "provider_fixture_id": "all_empty", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 3}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"]}}]
+    },
+    {
+      "case_id": "dev_provider_timeout",
+      "scenario_family": "dev_all_providers_timeout",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["provider_timeout", "terminal_failure", "truthfulness"], "notes": "Immediate controlled provider timeouts.",
+      "turns": [{"message": "Plan a 3-day trip from Munich to Rome.", "provider_fixture_id": "all_timeout", "travel_info": {"origin": "Munich", "destination": "Rome", "duration_days": 3}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"]}}]
+    },
+    {
+      "case_id": "dev_provider_unavailable",
+      "scenario_family": "dev_all_providers_unavailable",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["provider_unavailable", "fallback", "truthfulness"], "notes": "Providers return no service.",
+      "turns": [{"message": "Plan a 2-day trip from Berlin to Paris.", "provider_fixture_id": "all_unavailable", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 2}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"]}}]
+    },
+    {
+      "case_id": "dev_provider_malformed",
+      "scenario_family": "dev_all_providers_malformed",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["malformed_provider_data", "boundary_validation", "terminal_failure"], "notes": "Malformed controlled payloads.",
+      "turns": [{"message": "Plan a 3-day trip from Berlin to Paris.", "provider_fixture_id": "all_malformed", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 3}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"]}}]
+    },
+    {
+      "case_id": "dev_multiturn_select",
+      "scenario_family": "dev_multiturn_option_selection",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["multi_turn", "option_selection", "state_consistency"], "notes": "Second turn relies on prior option context.",
+      "turns": [
+        {"message": "Plan a 3-day trip from Berlin to Paris and show grounded options.", "provider_fixture_id": "berlin_paris_success", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 3}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"]}},
+        {"message": "Choose htl-par-001 and keep the rest of that trip unchanged.", "provider_fixture_id": "berlin_paris_success", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 3}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": [], "expected_selected_ids": ["htl-par-001"], "allowed_grounding_ids": ["htl-par-001"]}}
+      ]
+    },
+    {
+      "case_id": "dev_multiturn_modify",
+      "scenario_family": "dev_multiturn_plan_modification",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["multi_turn", "plan_modification", "accessibility", "state_consistency"], "notes": "Modification must preserve destination and duration.",
+      "turns": [
+        {"message": "Plan a 3-day trip from Munich to Rome.", "provider_fixture_id": "munich_rome_success", "travel_info": {"origin": "Munich", "destination": "Rome", "duration_days": 3}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"]}},
+        {"message": "Modify that plan to reduce walking but keep all three days in Rome.", "provider_fixture_id": "munich_rome_success", "travel_info": {"origin": "Munich", "destination": "Rome", "duration_days": 3}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": [], "must_include_terms": ["rome"]}}
+      ]
+    },
+    {
+      "case_id": "dev_unseen_context_destination",
+      "scenario_family": "dev_context_only_destination",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["unseen_destination", "context_grounding", "stable_ids"], "notes": "Kyoto is provided only by the sealed context fixture.",
+      "turns": [{"message": "Plan a 3-day trip to Kyoto using only the supplied options.", "provider_fixture_id": "unseen_kyoto_context", "travel_info": {"destination": "Kyoto", "duration_days": 3}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": [], "allowed_grounding_ids": ["wx-kyo-006", "htl-kyo-006", "evt-kyo-006"]}}]
+    },
+    {
+      "case_id": "dev_language_de",
+      "scenario_family": "dev_german_budget_trip",
+      "split": "development", "language": "de", "linguistic_review_required": true,
+      "skills": ["multilingual", "german", "itinerary"], "notes": "Human linguistic review required.",
+      "turns": [{"message": "Bitte plane eine 3-Tage-Reise von Berlin nach Paris mit 600 EUR Budget. Trip plan.", "provider_fixture_id": "berlin_paris_success", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 3, "budget": 600}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"], "language_markers": ["reise", "tag", "morgen", "abend"]}}]
+    },
+    {
+      "case_id": "dev_language_fr",
+      "scenario_family": "dev_french_budget_trip",
+      "split": "development", "language": "fr", "linguistic_review_required": true,
+      "skills": ["multilingual", "french", "itinerary"], "notes": "Human linguistic review required.",
+      "turns": [{"message": "Planifie un voyage de trois jours de Berlin à Paris avec un budget de 600 EUR. Trip plan.", "provider_fixture_id": "berlin_paris_success", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 3, "budget": 600}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"], "language_markers": ["voyage", "jour", "matin", "soir"]}}]
+    },
+    {
+      "case_id": "dev_language_it",
+      "scenario_family": "dev_italian_accessible_trip",
+      "split": "development", "language": "it", "linguistic_review_required": true,
+      "skills": ["multilingual", "italian", "accessibility"], "notes": "Human linguistic review required.",
+      "turns": [{"message": "Pianifica un viaggio di tre giorni da Monaco a Roma con poche camminate. Trip plan.", "provider_fixture_id": "munich_rome_success", "travel_info": {"origin": "Munich", "destination": "Rome", "duration_days": 3}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"], "language_markers": ["viaggio", "giorno", "mattina", "sera"]}}]
+    },
+    {
+      "case_id": "dev_language_pt",
+      "scenario_family": "dev_portuguese_no_budget",
+      "split": "development", "language": "pt", "linguistic_review_required": true,
+      "skills": ["multilingual", "portuguese", "no_budget"], "notes": "Human linguistic review required.",
+      "turns": [{"message": "Planeje uma viagem de três dias de Munique a Roma. Trip plan.", "provider_fixture_id": "munich_rome_success", "travel_info": {"origin": "Munich", "destination": "Rome", "duration_days": 3}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"], "language_markers": ["viagem", "dia", "manhã", "noite"]}}]
+    },
+    {
+      "case_id": "dev_language_hi",
+      "scenario_family": "dev_hindi_budget_trip",
+      "split": "development", "language": "hi", "linguistic_review_required": true,
+      "skills": ["multilingual", "hindi", "itinerary"], "notes": "Human linguistic review required.",
+      "turns": [{"message": "बर्लिन से पेरिस की तीन दिन की यात्रा 600 EUR में बनाइए। Trip plan.", "provider_fixture_id": "berlin_paris_success", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 3, "budget": 600}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"], "language_markers": ["यात्रा", "दिन", "सुबह", "शाम"]}}]
+    },
+    {
+      "case_id": "dev_language_es",
+      "scenario_family": "dev_spanish_impossible_budget",
+      "split": "development", "language": "es", "linguistic_review_required": true,
+      "skills": ["multilingual", "spanish", "impossible_budget"], "notes": "Human linguistic review required.",
+      "turns": [{"message": "Planifica un viaje de tres días de Berlín a París con solo 50 EUR. Trip plan.", "provider_fixture_id": "berlin_paris_success", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 3, "budget": 50}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"], "language_markers": ["viaje", "día", "mañana", "noche"]}}]
+    },
+    {
+      "case_id": "dev_language_th",
+      "scenario_family": "dev_thai_city_trip",
+      "split": "development", "language": "th", "linguistic_review_required": true,
+      "skills": ["multilingual", "thai", "itinerary"], "notes": "Human linguistic review required.",
+      "turns": [{"message": "ช่วยวางแผนทริปสามวันจากเบอร์ลินไปปารีส งบ 600 EUR Trip plan.", "provider_fixture_id": "berlin_paris_success", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 3, "budget": 600}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"], "language_markers": ["ทริป", "วัน", "เช้า", "เย็น"]}}]
+    },
+    {
+      "case_id": "dev_language_en_asr",
+      "scenario_family": "dev_english_asr_correction",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["english", "asr_like", "plan_modification"], "notes": "Correction embedded in transcript.",
+      "turns": [{"message": "plan a trip from berlin to rome sorry paris three days six hundred euros", "provider_fixture_id": "berlin_paris_success", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 3, "budget": 600}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"], "must_include_terms": ["paris"]}}]
+    },
+    {
+      "case_id": "dev_route_fact_guard",
+      "scenario_family": "dev_route_truthfulness",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["routing", "grounding_hard_failure", "truthfulness"], "notes": "No route duration or coordinates are supplied.",
+      "turns": [{"message": "Plan a 2-day Paris trip from Berlin and include a route map.", "provider_fixture_id": "all_empty", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 2}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"]}}]
+    },
+    {
+      "case_id": "dev_silent_fallback_guard",
+      "scenario_family": "dev_model_selection_truth",
+      "split": "development", "language": "en", "linguistic_review_required": false,
+      "skills": ["model_selection", "silent_fallback", "public_contract"], "notes": "Requested/loaded/selected variant must remain exact.",
+      "turns": [{"message": "Plan a 2-day trip from Berlin to Paris.", "provider_fixture_id": "all_empty", "travel_info": {"origin": "Berlin", "destination": "Paris", "duration_days": 2}, "expectation": {"intent": "itinerary_generation", "expected_provider_calls": ["weather", "flights", "hotels", "events"]}}]
+    }
+  ]
+}

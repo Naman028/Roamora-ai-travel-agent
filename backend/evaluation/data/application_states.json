@@ -1,0 +1,11 @@
+{
+  "schema_version": "roamora_application_state_v1",
+  "fixtures": [
+    {
+      "fixture_id": "canonical_stateless_request",
+      "session_id_prefix": "eval-v1",
+      "max_new_tokens": null,
+      "fixed_utc": "2030-01-01T00:00:00Z"
+    }
+  ]
+}
