@@ -1,0 +1,4 @@
+# Isolated Base/V1 evaluation environment. Do not install into backend/.venv.
+-r requirements.txt
+
+pytest==9.1.1
